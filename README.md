@@ -3,7 +3,7 @@ Guideline for Setup:
 Environment Setup Instructions:
 
 Clone repository and navigate to project directory:
-git clone https://github.com/DevOpss-Projectt/DevOps.git
+git clone https://github.com/mtauha/SPS-Internship-Project.git
 cd psx-etl
 
 Create and activate virtual environment:
