@@ -1,0 +1,20 @@
+# Kubernetes deployment.yaml for psx-etl
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: psx-etl-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: psx-etl
+  template:
+    metadata:
+      labels:
+        app: psx-etl
+    spec:
+      containers:
+        - name: psx-etl
+          image: psx-etl:latest
+          ports:
+            - containerPort: 5000

@@ -1,0 +1,12 @@
+# Kubernetes service.yaml for psx-etl
+apiVersion: v1
+kind: Service
+metadata:
+  name: psx-etl-service
+spec:
+  selector:
+    app: psx-etl
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5000
