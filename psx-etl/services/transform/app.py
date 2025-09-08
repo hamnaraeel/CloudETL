@@ -1,2 +1,2 @@
-# Transform service logic goes here
-print('Transforming data...')
+# Entrypoint for transform service
+from .transform_service import *

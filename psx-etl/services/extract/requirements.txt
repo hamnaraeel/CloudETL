@@ -1,2 +1,7 @@
+fastapi
+uvicorn
+yfinance
 pandas
-requests
+numpy
+pydantic
+tenacity
