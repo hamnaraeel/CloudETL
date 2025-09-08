@@ -1,2 +1,2 @@
-# Extract service logic goes here
-print('Extracting data...')
+# Entrypoint for extract service
+from .extract_service import *
