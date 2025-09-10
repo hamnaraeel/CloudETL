@@ -31,6 +31,68 @@ SELECTED_INFO_FIELDS = [
     "averageVolume", "currency", "dividendRate", "dividendYield", "trailingPE", "forwardPE"
 ]
 
+@app.get("/health")
+def health_check():
+    """Health check endpoint - actually tests service health"""
+    import time
+    start_time = time.time()
+    
+    checks = {
+        "service": "extract-service",
+        "version": "1.0.0",
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "checks": {}
+    }
+    
+    # Test 1: Check if yfinance is accessible
+    try:
+        test_ticker = yf.Ticker("AAPL")
+        info = test_ticker.info
+        if info and len(info) > 0:
+            checks["checks"]["yfinance"] = "healthy"
+        else:
+            checks["checks"]["yfinance"] = "unhealthy - no data"
+    except Exception as e:
+        checks["checks"]["yfinance"] = f"unhealthy - {str(e)[:50]}"
+    
+    # Test 2: Check response time
+    response_time = (time.time() - start_time) * 1000  # in milliseconds
+    checks["response_time_ms"] = round(response_time, 2)
+    
+    if response_time > 5000:  # 5 seconds
+        checks["checks"]["response_time"] = "unhealthy - too slow"
+    elif response_time > 2000:  # 2 seconds
+        checks["checks"]["response_time"] = "degraded - slow"
+    else:
+        checks["checks"]["response_time"] = "healthy"
+    
+    # Test 3: Memory check (basic)
+    try:
+        import psutil
+        memory_percent = psutil.virtual_memory().percent
+        if memory_percent > 90:
+            checks["checks"]["memory"] = "unhealthy - high usage"
+        elif memory_percent > 80:
+            checks["checks"]["memory"] = "degraded - moderate usage"
+        else:
+            checks["checks"]["memory"] = "healthy"
+        checks["memory_usage_percent"] = memory_percent
+    except ImportError:
+        checks["checks"]["memory"] = "unknown - psutil not available"
+    
+    # Overall status
+    unhealthy_count = sum(1 for check in checks["checks"].values() if "unhealthy" in str(check))
+    degraded_count = sum(1 for check in checks["checks"].values() if "degraded" in str(check))
+    
+    if unhealthy_count > 0:
+        checks["status"] = "unhealthy"
+    elif degraded_count > 0:
+        checks["status"] = "degraded"
+    else:
+        checks["status"] = "healthy"
+    
+    return checks
+
 @app.get("/extract/{ticker}")
 def extract_ticker(
     ticker: str,
