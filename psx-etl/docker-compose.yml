@@ -17,6 +17,17 @@ services:
     networks:
       - psx-etl-network
 
+  visualization-service:
+    build: ./services/visualization
+    ports:
+      - "8002:8002"
+    depends_on:
+      - transform-service
+    environment:
+      - TRANSFORM_SERVICE_URL=http://transform-service:8001
+    networks:
+      - psx-etl-network
+
 networks:
   psx-etl-network:
     driver: bridge
