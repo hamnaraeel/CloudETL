@@ -23,6 +23,11 @@ docker-compose up --build -d
 - **📊 Visualization Dashboard**: http://localhost:8002
   - **MAIN DASHBOARD** - Full stock analytics interface
 
+- **🏛️ Load Service (Data Warehouse)**: http://localhost:8003
+  - API Docs: http://localhost:8003/docs
+  - Health Check: http://localhost:8003/health
+  - Warehouse Stats: http://localhost:8003/stats
+
 ### **Stop All Services**
 ```bash
 # Stop services
@@ -41,6 +46,7 @@ docker-compose logs -f
 docker-compose logs -f extract-service
 docker-compose logs -f transform-service  
 docker-compose logs -f visualization-service
+docker-compose logs -f load-service
 ```
 
 ### **Individual Service Management**
@@ -111,7 +117,8 @@ docker-compose logs -f
 ### **Dashboard Shows "No Data"**
 1. Check Transform Service: http://localhost:8001/health
 2. Check Extract Service: http://localhost:8000/health
-3. View logs: `docker-compose logs -f transform-service`
+3. Check Load Service: http://localhost:8003/health
+4. View logs: `docker-compose logs -f transform-service`
 
 ### **Port Conflicts**
 If ports are in use, modify docker-compose.yml:
@@ -140,6 +147,12 @@ curl http://localhost:8000/extract/AAPL
 curl -X POST http://localhost:8001/transform_batch \
   -H "Content-Type: application/json" \
   -d '{"tickers": "AAPL", "period": "1mo"}'
+
+# Test Load Service (Data Warehouse)
+curl -X POST http://localhost:8003/load/AAPL?period=1mo
+
+# Query warehouse data
+curl http://localhost:8003/data/AAPL
 ```
 
 ### **Dashboard Features**
@@ -154,6 +167,7 @@ When all services are running, you'll have:
 - Professional stock data extraction
 - Advanced financial analytics  
 - Beautiful interactive dashboard
+- **Star Schema Data Warehouse** with SCD Type 2
 - Complete ETL pipeline ready for production!
 
 **Main Dashboard URL: http://localhost:8002**

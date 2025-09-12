@@ -502,12 +502,12 @@ async def transform_batch(request: Dict[str, Any]):
             )
             
             if response.status_code != 200:
-                raise HTTPException(status_code=400, detail="Failed to fetch data from extract service")
+                raise HTTPException(status_code=400, detail=f"Failed to fetch data from extract service. Status: {response.status_code}, Response: {response.text[:200]}")
             
             extract_data = response.json()
             
             if "data" not in extract_data:
-                raise HTTPException(status_code=400, detail="No data from extract service")
+                raise HTTPException(status_code=400, detail=f"No data key in extract service response: {extract_data}")
         
         all_records = []
         for ticker_data in extract_data["data"].values():
