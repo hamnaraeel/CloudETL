@@ -27,6 +27,14 @@ services:
       - TRANSFORM_SERVICE_URL=http://transform-service:8001
     networks:
       - psx-etl-network
+  scheduler-service:
+    build: ./services/scheduler
+    ports:
+      - "8004:8004"
+    depends_on:
+      - extract-service
+      - transform-service
+     # - load-service
 
 networks:
   psx-etl-network:
