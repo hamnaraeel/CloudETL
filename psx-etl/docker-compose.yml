@@ -50,6 +50,41 @@ services:
       timeout: 10s
       retries: 3
 
+  postgres-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: psx_user
+      POSTGRES_PASSWORD: psx_password123
+      POSTGRES_DB: psx_warehouse
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - psx-etl-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U psx_user -d psx_warehouse"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  load-service:
+    build: ./services/load
+    ports:
+      - "8003:8003"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      transform-service:
+        condition: service_started
+    env_file:
+      - ./services/load/.env
+    networks:
+      - psx-etl-network
+
 networks:
   psx-etl-network:
     driver: bridge
+
+volumes:
+  postgres_data:
