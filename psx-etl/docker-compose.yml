@@ -7,26 +7,44 @@ services:
       - "8000:8000"
     networks:
       - psx-etl-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   transform-service:
     build: ./services/transform
     ports:
       - "8001:8001"
     depends_on:
-      - extract-service
+      extract-service:
+        condition: service_healthy
     networks:
       - psx-etl-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   visualization-service:
     build: ./services/visualization
     ports:
       - "8002:8002"
     depends_on:
-      - transform-service
+      transform-service:
+        condition: service_healthy
     environment:
       - TRANSFORM_SERVICE_URL=http://transform-service:8001
     networks:
       - psx-etl-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   scheduler-service:
     build: ./services/scheduler
     ports:
@@ -38,10 +56,13 @@ services:
         condition: service_healthy
       visualization-service:
         condition: service_healthy
+      load-service:
+        condition: service_healthy
     environment:
       - EXTRACT_SERVICE_URL=http://extract-service:8000
       - TRANSFORM_SERVICE_URL=http://transform-service:8001
       - VISUALIZATION_SERVICE_URL=http://visualization-service:8002
+      - LOAD_SERVICE_URL=http://load-service:8003
     networks:
       - psx-etl-network
     healthcheck:
@@ -76,11 +97,16 @@ services:
       postgres-db:
         condition: service_healthy
       transform-service:
-        condition: service_started
+        condition: service_healthy
     env_file:
       - ./services/load/.env
     networks:
       - psx-etl-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   psx-etl-network:
