@@ -137,12 +137,145 @@ def run_scheduler():
 
 @app.route("/health")
 def health():
-    return jsonify({
+    """Comprehensive health check for scheduler service"""
+    import time
+    import psutil
+    
+    start_time = time.time()
+    
+    checks = {
         "service": "scheduler-service",
-        "status": "healthy",
+        "version": "1.0.0",
         "timestamp": datetime.datetime.utcnow().isoformat(),
-        "job_status": job_status
-    })
+        "checks": {}
+    }
+    
+    # Test 1: System resource check
+    try:
+        memory_percent = psutil.virtual_memory().percent
+        cpu_percent = psutil.cpu_percent(interval=0.1)
+        
+        if memory_percent > 90:
+            checks["checks"]["memory"] = "unhealthy - high usage"
+        elif memory_percent > 80:
+            checks["checks"]["memory"] = "degraded - moderate usage"
+        else:
+            checks["checks"]["memory"] = "healthy"
+        checks["memory_usage_percent"] = round(memory_percent, 1)
+        
+        if cpu_percent > 90:
+            checks["checks"]["cpu"] = "unhealthy - high usage"
+        elif cpu_percent > 80:
+            checks["checks"]["cpu"] = "degraded - moderate usage"
+        else:
+            checks["checks"]["cpu"] = "healthy"
+        checks["cpu_usage_percent"] = round(cpu_percent, 1)
+        
+    except Exception as e:
+        checks["checks"]["system"] = f"degraded - {str(e)[:50]}"
+    
+    # Test 2: Scheduler status
+    try:
+        jobs_count = len(schedule.jobs)
+        if jobs_count > 0:
+            checks["checks"]["scheduler"] = "healthy"
+            checks["active_jobs"] = jobs_count
+        else:
+            checks["checks"]["scheduler"] = "degraded - no scheduled jobs"
+            checks["active_jobs"] = 0
+            
+    except Exception as e:
+        checks["checks"]["scheduler"] = f"unhealthy - {str(e)[:50]}"
+    
+    # Test 3: Job execution history
+    try:
+        runs_count = job_status.get("runs_count", 0)
+        last_run = job_status.get("last_run")
+        current_status = job_status.get("status", "unknown")
+        
+        # Check if scheduler has been running
+        if runs_count == 0:
+            checks["checks"]["job_execution"] = "degraded - no runs yet"
+        elif current_status == "error":
+            checks["checks"]["job_execution"] = "unhealthy - last job failed"
+        elif current_status in ["running", "completed", "partial"]:
+            checks["checks"]["job_execution"] = "healthy"
+        else:
+            checks["checks"]["job_execution"] = f"degraded - status: {current_status}"
+            
+        checks["total_runs"] = runs_count
+        checks["last_run"] = last_run
+        
+    except Exception as e:
+        checks["checks"]["job_execution"] = f"degraded - {str(e)[:50]}"
+    
+    # Test 4: Service connectivity checks
+    services_health = {
+        "load_service": "unknown",
+        "visualization_service": "unknown"
+    }
+    
+    # Test Load Service
+    try:
+        response = requests.get(f"{LOAD_SERVICE_URL}/health", timeout=2)
+        if response.status_code == 200:
+            services_health["load_service"] = "healthy"
+        else:
+            services_health["load_service"] = f"degraded - status {response.status_code}"
+    except Exception as e:
+        services_health["load_service"] = f"unhealthy - {str(e)[:30]}"
+    
+    # Test Visualization Service  
+    try:
+        response = requests.get(f"{VISUALIZATION_SERVICE_URL}/health", timeout=2)
+        if response.status_code == 200:
+            services_health["visualization_service"] = "healthy"
+        else:
+            services_health["visualization_service"] = f"degraded - status {response.status_code}"
+    except Exception as e:
+        services_health["visualization_service"] = f"unhealthy - {str(e)[:30]}"
+    
+    checks["checks"]["service_connectivity"] = services_health
+    
+    # Evaluate service connectivity health
+    unhealthy_services = sum(1 for status in services_health.values() if "unhealthy" in status)
+    degraded_services = sum(1 for status in services_health.values() if "degraded" in status)
+    
+    if unhealthy_services > 1:
+        checks["checks"]["services_overall"] = "unhealthy - multiple services down"
+    elif unhealthy_services > 0 or degraded_services > 1:
+        checks["checks"]["services_overall"] = "degraded - some services struggling"  
+    else:
+        checks["checks"]["services_overall"] = "healthy"
+    
+    # Test 5: Response time check
+    response_time = (time.time() - start_time) * 1000
+    checks["response_time_ms"] = round(response_time, 2)
+    
+    if response_time > 3000:
+        checks["checks"]["response_time"] = "unhealthy - too slow"
+    elif response_time > 1500:
+        checks["checks"]["response_time"] = "degraded - slow"
+    else:
+        checks["checks"]["response_time"] = "healthy"
+    
+    # Overall status calculation
+    unhealthy_count = sum(1 for check in checks["checks"].values() 
+                         if isinstance(check, str) and "unhealthy" in check)
+    degraded_count = sum(1 for check in checks["checks"].values() 
+                        if isinstance(check, str) and "degraded" in check)
+    
+    if unhealthy_count > 0:
+        checks["status"] = "unhealthy"
+    elif degraded_count > 0:
+        checks["status"] = "degraded"
+    else:
+        checks["status"] = "healthy"
+    
+    # Include job status for backwards compatibility
+    checks["job_status"] = job_status
+    
+    return jsonify(checks)
 
 @app.route("/status")
 def status():

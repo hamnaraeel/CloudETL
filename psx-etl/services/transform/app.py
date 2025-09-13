@@ -79,11 +79,119 @@ def root():
 
 @app.get("/health")
 def health_check():
-    return {
+    """Comprehensive health check for transform service"""
+    import time
+    import psutil
+    import httpx
+    
+    start_time = time.time()
+    
+    checks = {
         "service": "transform-service",
-        "status": "healthy",
-        "timestamp": datetime.now().isoformat()
+        "version": "2.0.0",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "checks": {}
     }
+    
+    # Test 1: Memory usage check
+    try:
+        memory_percent = psutil.virtual_memory().percent
+        cpu_percent = psutil.cpu_percent(interval=0.1)
+        
+        if memory_percent > 90:
+            checks["checks"]["memory"] = "unhealthy - high usage"
+        elif memory_percent > 80:
+            checks["checks"]["memory"] = "degraded - moderate usage"  
+        else:
+            checks["checks"]["memory"] = "healthy"
+        checks["memory_usage_percent"] = round(memory_percent, 1)
+        
+        if cpu_percent > 90:
+            checks["checks"]["cpu"] = "unhealthy - high usage"
+        elif cpu_percent > 80:
+            checks["checks"]["cpu"] = "degraded - moderate usage"
+        else:
+            checks["checks"]["cpu"] = "healthy"
+        checks["cpu_usage_percent"] = round(cpu_percent, 1)
+        
+    except Exception as e:
+        checks["checks"]["system"] = f"degraded - {str(e)[:50]}"
+    
+    # Test 2: Data processing capability
+    try:
+        # Test basic transformation with small dataset
+        test_data = [{
+            "Ticker": "TEST",
+            "Date": "2024-01-01T00:00:00Z",
+            "Open": 100.0,
+            "High": 105.0,
+            "Low": 95.0,
+            "Close": 102.0,
+            "Volume": 1000000
+        }]
+        
+        cleaned_data = clean_and_standardize(test_data)
+        if len(cleaned_data) > 0:
+            checks["checks"]["data_processing"] = "healthy"
+        else:
+            checks["checks"]["data_processing"] = "unhealthy - processing failed"
+            
+    except Exception as e:
+        checks["checks"]["data_processing"] = f"unhealthy - {str(e)[:50]}"
+    
+    # Test 3: Dependencies check (pandas, numpy)
+    try:
+        import pandas as pd
+        import numpy as np
+        
+        # Test basic operations
+        test_df = pd.DataFrame({"test": [1, 2, 3]})
+        test_array = np.array([1, 2, 3])
+        
+        if len(test_df) == 3 and len(test_array) == 3:
+            checks["checks"]["dependencies"] = "healthy"
+        else:
+            checks["checks"]["dependencies"] = "degraded - unexpected behavior"
+            
+    except Exception as e:
+        checks["checks"]["dependencies"] = f"unhealthy - {str(e)[:50]}"
+    
+    # Test 4: Response time check
+    response_time = (time.time() - start_time) * 1000
+    checks["response_time_ms"] = round(response_time, 2)
+    
+    if response_time > 5000:
+        checks["checks"]["response_time"] = "unhealthy - too slow"
+    elif response_time > 2000:
+        checks["checks"]["response_time"] = "degraded - slow"
+    else:
+        checks["checks"]["response_time"] = "healthy"
+    
+    # Test 5: Extract service connectivity (optional)
+    try:
+        async def test_extract_connectivity():
+            async with httpx.AsyncClient(timeout=2) as client:
+                response = await client.get("http://extract-service:8000/health")
+                return response.status_code == 200
+        
+        # This is a sync endpoint, so we'll skip the async test for now
+        checks["checks"]["extract_service"] = "unknown - async test skipped"
+        
+    except Exception:
+        checks["checks"]["extract_service"] = "unknown - connectivity test failed"
+    
+    # Overall status calculation
+    unhealthy_count = sum(1 for check in checks["checks"].values() if "unhealthy" in str(check))
+    degraded_count = sum(1 for check in checks["checks"].values() if "degraded" in str(check))
+    
+    if unhealthy_count > 0:
+        checks["status"] = "unhealthy"
+    elif degraded_count > 0:
+        checks["status"] = "degraded"
+    else:
+        checks["status"] = "healthy"
+    
+    return checks
 
 @app.get("/config")
 def get_config():

@@ -106,7 +106,137 @@ Base.metadata.create_all(bind=engine)
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "service": "load-service"}
+    """Comprehensive health check for load service"""
+    import time
+    import psutil
+    
+    start_time = time.time()
+    
+    checks = {
+        "service": "load-service",
+        "version": "1.0.0", 
+        "timestamp": datetime.utcnow().isoformat(),
+        "checks": {}
+    }
+    
+    # Test 1: Database connectivity
+    try:
+        db = SessionLocal()
+        # Simple query to test database connection
+        result = db.execute("SELECT 1").fetchone()
+        db.close()
+        
+        if result and result[0] == 1:
+            checks["checks"]["database"] = "healthy"
+        else:
+            checks["checks"]["database"] = "unhealthy - unexpected result"
+            
+    except Exception as e:
+        checks["checks"]["database"] = f"unhealthy - {str(e)[:50]}"
+    
+    # Test 2: Database table existence
+    try:
+        db = SessionLocal()
+        # Check if main tables exist
+        tables_to_check = ["fact_stock_prices", "dim_ticker", "dim_date", "dim_time"]
+        missing_tables = []
+        
+        for table in tables_to_check:
+            result = db.execute(f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '{table}')").fetchone()
+            if not result or not result[0]:
+                missing_tables.append(table)
+        
+        db.close()
+        
+        if len(missing_tables) == 0:
+            checks["checks"]["database_schema"] = "healthy"
+        else:
+            checks["checks"]["database_schema"] = f"unhealthy - missing tables: {missing_tables}"
+            
+    except Exception as e:
+        checks["checks"]["database_schema"] = f"unhealthy - {str(e)[:50]}"
+    
+    # Test 3: System resource check
+    try:
+        memory_percent = psutil.virtual_memory().percent
+        cpu_percent = psutil.cpu_percent(interval=0.1)
+        disk_percent = psutil.disk_usage('/').percent
+        
+        if memory_percent > 90:
+            checks["checks"]["memory"] = "unhealthy - high usage"
+        elif memory_percent > 80:
+            checks["checks"]["memory"] = "degraded - moderate usage"
+        else:
+            checks["checks"]["memory"] = "healthy"
+        checks["memory_usage_percent"] = round(memory_percent, 1)
+        
+        if cpu_percent > 90:
+            checks["checks"]["cpu"] = "unhealthy - high usage"
+        elif cpu_percent > 80:
+            checks["checks"]["cpu"] = "degraded - moderate usage"
+        else:
+            checks["checks"]["cpu"] = "healthy"
+        checks["cpu_usage_percent"] = round(cpu_percent, 1)
+        
+        if disk_percent > 95:
+            checks["checks"]["disk"] = "unhealthy - critically low space"
+        elif disk_percent > 85:
+            checks["checks"]["disk"] = "degraded - low space"
+        else:
+            checks["checks"]["disk"] = "healthy"
+        checks["disk_usage_percent"] = round(disk_percent, 1)
+        
+    except Exception as e:
+        checks["checks"]["system"] = f"degraded - {str(e)[:50]}"
+    
+    # Test 4: Transform service connectivity
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=3) as client:
+            response = await client.get(f"{TRANSFORM_SERVICE_URL}/health")
+            if response.status_code == 200:
+                checks["checks"]["transform_service"] = "healthy"
+            else:
+                checks["checks"]["transform_service"] = f"degraded - status {response.status_code}"
+                
+    except Exception as e:
+        checks["checks"]["transform_service"] = f"unhealthy - {str(e)[:50]}"
+    
+    # Test 5: Response time check
+    response_time = (time.time() - start_time) * 1000
+    checks["response_time_ms"] = round(response_time, 2)
+    
+    if response_time > 5000:
+        checks["checks"]["response_time"] = "unhealthy - too slow"
+    elif response_time > 2000:
+        checks["checks"]["response_time"] = "degraded - slow"
+    else:
+        checks["checks"]["response_time"] = "healthy"
+    
+    # Test 6: Basic data loading capability
+    try:
+        # Test database session creation
+        db = SessionLocal()
+        # Test query execution
+        test_query = db.query(DimTicker).limit(1).first()
+        db.close()
+        checks["checks"]["data_loading"] = "healthy"
+        
+    except Exception as e:
+        checks["checks"]["data_loading"] = f"degraded - {str(e)[:50]}"
+    
+    # Overall status calculation
+    unhealthy_count = sum(1 for check in checks["checks"].values() if "unhealthy" in str(check))
+    degraded_count = sum(1 for check in checks["checks"].values() if "degraded" in str(check))
+    
+    if unhealthy_count > 0:
+        checks["status"] = "unhealthy"
+    elif degraded_count > 0:
+        checks["status"] = "degraded"
+    else:
+        checks["status"] = "healthy"
+    
+    return checks
 
 @app.get("/")
 async def root():
