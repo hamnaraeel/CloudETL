@@ -822,5 +822,132 @@ def update_all_charts(ticker, *button_clicks):
         )
         return [error_fig] * 8 + [f"Error: {str(e)}"]
 
+# Add Flask routes for health checks and refresh
+from flask import Flask, jsonify
+import time
+import psutil
+
+server = app.server
+
+@server.route('/health')
+def health_check():
+    """Comprehensive health check for visualization service"""
+    start_time = time.time()
+    
+    checks = {
+        "service": "visualization-service",
+        "version": "1.0.0",
+        "timestamp": datetime.now().isoformat(),
+        "checks": {}
+    }
+    
+    # Test 1: System resource check
+    try:
+        memory_percent = psutil.virtual_memory().percent
+        cpu_percent = psutil.cpu_percent(interval=0.1)
+        
+        if memory_percent > 90:
+            checks["checks"]["memory"] = "unhealthy - high usage"
+        elif memory_percent > 80:
+            checks["checks"]["memory"] = "degraded - moderate usage"
+        else:
+            checks["checks"]["memory"] = "healthy"
+        checks["memory_usage_percent"] = round(memory_percent, 1)
+        
+        if cpu_percent > 90:
+            checks["checks"]["cpu"] = "unhealthy - high usage"
+        elif cpu_percent > 80:
+            checks["checks"]["cpu"] = "degraded - moderate usage"
+        else:
+            checks["checks"]["cpu"] = "healthy"
+        checks["cpu_usage_percent"] = round(cpu_percent, 1)
+        
+    except Exception as e:
+        checks["checks"]["system"] = f"degraded - {str(e)[:50]}"
+    
+    # Test 2: Transform service connectivity
+    try:
+        transform_url = os.getenv('TRANSFORM_SERVICE_URL', 'http://localhost:8001')
+        response = requests.get(f'{transform_url}/health', timeout=3)
+        if response.status_code == 200:
+            checks["checks"]["transform_service"] = "healthy"
+        else:
+            checks["checks"]["transform_service"] = f"degraded - status {response.status_code}"
+            
+    except Exception as e:
+        checks["checks"]["transform_service"] = f"unhealthy - {str(e)[:50]}"
+    
+    # Test 3: Data fetching capability
+    try:
+        # Test basic data fetch with cache
+        test_data = get_cached_data("AAPL", "5d", int(time.time() / 300))
+        if isinstance(test_data, list) and len(test_data) >= 0:  # Empty list is OK
+            checks["checks"]["data_fetching"] = "healthy"
+        else:
+            checks["checks"]["data_fetching"] = "degraded - unexpected data format"
+            
+    except Exception as e:
+        checks["checks"]["data_fetching"] = f"unhealthy - {str(e)[:50]}"
+    
+    # Test 4: Dashboard component health
+    try:
+        import plotly.graph_objects as go
+        import pandas as pd
+        
+        # Test basic chart creation
+        test_fig = go.Figure()
+        test_df = pd.DataFrame({"test": [1, 2, 3]})
+        
+        if test_fig and len(test_df) == 3:
+            checks["checks"]["dashboard_components"] = "healthy"
+        else:
+            checks["checks"]["dashboard_components"] = "degraded - component issues"
+            
+    except Exception as e:
+        checks["checks"]["dashboard_components"] = f"unhealthy - {str(e)[:50]}"
+    
+    # Test 5: Response time check
+    response_time = (time.time() - start_time) * 1000
+    checks["response_time_ms"] = round(response_time, 2)
+    
+    if response_time > 5000:
+        checks["checks"]["response_time"] = "unhealthy - too slow"
+    elif response_time > 2000:
+        checks["checks"]["response_time"] = "degraded - slow"
+    else:
+        checks["checks"]["response_time"] = "healthy"
+    
+    # Overall status calculation
+    unhealthy_count = sum(1 for check in checks["checks"].values() if "unhealthy" in str(check))
+    degraded_count = sum(1 for check in checks["checks"].values() if "degraded" in str(check))
+    
+    if unhealthy_count > 0:
+        checks["status"] = "unhealthy"
+    elif degraded_count > 0:
+        checks["status"] = "degraded"
+    else:
+        checks["status"] = "healthy"
+    
+    return jsonify(checks)
+
+@server.route('/refresh')
+def refresh_dashboard():
+    """Trigger dashboard refresh - clear cache"""
+    try:
+        # Clear the cache to force fresh data on next request
+        get_cached_data.cache_clear()
+        
+        return jsonify({
+            "message": "Dashboard cache cleared successfully",
+            "timestamp": datetime.now().isoformat(),
+            "status": "success"
+        })
+    except Exception as e:
+        return jsonify({
+            "error": f"Failed to refresh dashboard: {str(e)}",
+            "timestamp": datetime.now().isoformat(),
+            "status": "error"
+        }), 500
+
 if __name__ == '__main__':
     app.run_server(debug=True, host='0.0.0.0', port=8002)
