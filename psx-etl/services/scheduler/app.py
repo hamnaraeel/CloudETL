@@ -14,8 +14,7 @@ logger = logging.getLogger(__name__)
 
 # Configuration
 VISUALIZATION_SERVICE_URL = "http://visualization-service:8002"
-EXTRACT_SERVICE_URL = "http://extract-service:8000"
-TRANSFORM_SERVICE_URL = "http://transform-service:8001"
+LOAD_SERVICE_URL = "http://load-service:8003"
 
 # Job status tracking
 job_status = {
@@ -34,76 +33,49 @@ def trigger_data_update():
         
         services_triggered = 0
         
-        # 1. EXTRACT SERVICE - Trigger data extraction
+        # 1. LOAD SERVICE - Trigger data loading to warehouse
         try:
-            logger.info("Triggering Extract Service...")
-            # Try the actual endpoint that exists in your extract service
-            response = requests.get(f"{EXTRACT_SERVICE_URL}/extract_many", 
-                       params={"ticker": "AAPL", "period": "1mo"},  # Use params, not json
-                       timeout=30)
-            
-            if response.status_code in [200, 201]:
-                logger.info("âœ… Successfully triggered Extract Service")
-                services_triggered += 1
-            else:
-                logger.warning(f"âš ï¸ Extract service returned status: {response.status_code}")
-                
-        except requests.exceptions.RequestException as e:
-            logger.warning(f"âš ï¸ Extract service connection error: {str(e)}")
-
-        # 2. TRANSFORM SERVICE - Trigger data processing
-        try:
-            logger.info("Triggering Transform Service...")
-            # Use the actual working endpoint from your logs
-            response = requests.post(f"{TRANSFORM_SERVICE_URL}/transform_batch", 
-                                   json= {"tickers": ["AAPL", "GOOGL", "MSFT"]}, # Send required tickers for batch processing
+            logger.info("Triggering Load Service...")
+            response = requests.post(f"{LOAD_SERVICE_URL}/load/batch", 
+                                   json={"tickers": "AAPL,GOOGL,MSFT", "period": "1mo"},
                                    timeout=30)
             
             if response.status_code in [200, 201]:
-                logger.info("âœ… Successfully triggered Transform Service")
+                logger.info("Successfully triggered Load Service")
                 services_triggered += 1
             else:
-                logger.warning(f"âš ï¸ Transform service returned status: {response.status_code}")
+                logger.warning(f"Load service returned status: {response.status_code}")
                 
         except requests.exceptions.RequestException as e:
-            logger.warning(f"âš ï¸ Transform service connection error: {str(e)}")
+            logger.warning(f"Load service connection error: {str(e)}")
 
-        # 3. VISUALIZATION SERVICE - Trigger dashboard refresh
+        # 2. VISUALIZATION SERVICE - Trigger dashboard refresh
         try:
             logger.info("Triggering Visualization Service...")
             response = requests.get(f"{VISUALIZATION_SERVICE_URL}/refresh", timeout=10)
             
             if response.status_code == 200:
-                logger.info("âœ… Successfully triggered Visualization Service")
+                logger.info("Successfully triggered Visualization Service")
                 services_triggered += 1
             else:
-                logger.warning(f"âš ï¸ Visualization service returned status: {response.status_code}")
+                logger.warning(f"Visualization service returned status: {response.status_code}")
                 
         except requests.exceptions.RequestException as e:
-            logger.warning(f"âš ï¸ Visualization service connection error: {str(e)}")
-
-        # 4. OPTIONAL: Chain the services in proper order
-        # Uncomment this section if you want to ensure proper data flow sequence
-        """
-        # Wait a bit between services to ensure data flows properly
-        if services_triggered > 0:
-            logger.info("Waiting 5 seconds between service triggers...")
-            time.sleep(5)
-        """
+            logger.warning(f"Visualization service connection error: {str(e)}")
         
         # Update job status
         job_status["last_run"] = datetime.datetime.utcnow().isoformat()
         job_status["runs_count"] += 1
         
-        if services_triggered >= 2:  # At least 2 out of 3 services
+        if services_triggered >= 2:  # Both services successful
             job_status["status"] = "completed"
-            logger.info(f"âœ… Scheduled update completed - triggered {services_triggered}/3 services")
+            logger.info(f"Scheduled update completed - triggered {services_triggered}/2 services")
         elif services_triggered > 0:
             job_status["status"] = "partial"
-            logger.warning(f"âš ï¸ Partial update - triggered {services_triggered}/3 services")
+            logger.warning(f"Partial update - triggered {services_triggered}/2 services")
         else:
             job_status["status"] = "error"
-            logger.error("âŒ No services could be triggered")
+            logger.error("No services could be triggered")
         
     except Exception as e:
         logger.error(f"Error in scheduled data update: {str(e)}")
@@ -119,14 +91,9 @@ def trigger_data_update():
 def trigger_specific_service(service_name):
     """Trigger a specific service manually"""
     try:
-        if service_name == "extract":
-            response = requests.get(f"{EXTRACT_SERVICE_URL}/extract_many", 
-                                   params={"ticker": "AAPL", "period": "1mo"}, timeout=30)
-            return response.status_code in [200, 201]
-            
-        elif service_name == "transform":
-            response = requests.post(f"{TRANSFORM_SERVICE_URL}/transform_batch", 
-                                   json={"tickers": ["AAPL", "GOOGL", "MSFT"]}, timeout=30)
+        if service_name == "load":
+            response = requests.post(f"{LOAD_SERVICE_URL}/load/batch", 
+                                   json={"tickers": "AAPL,GOOGL,MSFT", "period": "1mo"}, timeout=30)
             return response.status_code in [200, 201]
             
         elif service_name == "visualization":
@@ -480,13 +447,13 @@ def home():
     </head>
     <body>
         <div class="header">
-            <h1>ðŸš€ AUTOMATED SCHEDULER</h1>
-            <p class="subtitle">âš¡ Real-Time Pipeline Orchestration & Advanced Automation âš¡</p>
+            <h1>AUTOMATED SCHEDULER</h1>
+            <p class="subtitle">Real-Time Pipeline Orchestration & Advanced Automation</p>
         </div>
 
         <div class="dashboard">
             <div class="card">
-                <h2>ðŸ“Š System Status</h2>
+                <h2>System Status</h2>
                 <div class="stats-row">
                     <div class="metric">
                         <div class="metric-value" id="runs-count">0</div>
@@ -524,28 +491,25 @@ def home():
                 </div>
 
                 <button class="refresh-btn" onclick="triggerUpdate()">
-                    ðŸ”„ Trigger Full Pipeline
+                    Trigger Full Pipeline
                 </button>
             </div>
 
             <div class="card">
-                <h2>ðŸŽ¯ Individual Services</h2>
-                <button class="service-btn" onclick="triggerService('extract')">
-                    ðŸ“¥ Trigger Extract Service
-                </button>
-                <button class="service-btn" onclick="triggerService('transform')">
-                    âš™ï¸ Trigger Transform Service
+                <h2>Individual Services</h2>
+                <button class="service-btn" onclick="triggerService('load')">
+                    Trigger Load Service
                 </button>
                 <button class="service-btn" onclick="triggerService('visualization')">
-                    ðŸ“Š Trigger Visualization Service
+                    Trigger Visualization Service
                 </button>
             </div>
 
             <div class="card">
-                <h2>âš ï¸ System Logs</h2>
+                <h2>System Logs</h2>
                 <div class="errors-container" id="errors">
                     <p style="text-align: center; opacity: 0.7; padding: 20px;">
-                        No recent errors - System running smoothly âœ…
+                        No recent errors - System running smoothly
                     </p>
                 </div>
             </div>
@@ -584,7 +548,7 @@ def home():
                     } else {
                         errorsDiv.innerHTML = `
                             <p style="text-align: center; opacity: 0.7; padding: 20px;">
-                                No recent errors - System running smoothly âœ…
+                                No recent errors - System running smoothly
                             </p>
                         `;
                     }
@@ -597,7 +561,7 @@ def home():
             async function triggerUpdate() {
                 const btn = document.querySelector('.refresh-btn');
                 const originalText = btn.innerHTML;
-                btn.innerHTML = 'â³ Triggering...';
+                btn.innerHTML = 'Triggering...';
                 btn.disabled = true;
                 
                 try {
@@ -605,20 +569,20 @@ def home():
                     const data = await response.json();
                     
                     if (response.ok) {
-                        btn.innerHTML = 'âœ… Pipeline Triggered!';
+                        btn.innerHTML = 'Pipeline Triggered!';
                         setTimeout(() => {
                             btn.innerHTML = originalText;
                             btn.disabled = false;
                         }, 3000);
                     } else {
-                        btn.innerHTML = 'âŒ Failed to Trigger';
+                        btn.innerHTML = 'Failed to Trigger';
                         setTimeout(() => {
                             btn.innerHTML = originalText;
                             btn.disabled = false;
                         }, 2000);
                     }
                 } catch (error) {
-                    btn.innerHTML = 'âŒ Connection Error';
+                    btn.innerHTML = 'Connection Error';
                     setTimeout(() => {
                         btn.innerHTML = originalText;
                         btn.disabled = false;
@@ -634,7 +598,7 @@ def home():
                 const btn = Array.from(buttons).find(b => b.textContent.toLowerCase().includes(serviceName));
                 const originalText = btn.innerHTML;
                 
-                btn.innerHTML = `â³ Triggering ${serviceName}...`;
+                btn.innerHTML = `Triggering ${serviceName}...`;
                 btn.disabled = true;
                 
                 try {
@@ -642,20 +606,20 @@ def home():
                     const data = await response.json();
                     
                     if (response.ok) {
-                        btn.innerHTML = `âœ… ${serviceName} Triggered!`;
+                        btn.innerHTML = `${serviceName} Triggered!`;
                         setTimeout(() => {
                             btn.innerHTML = originalText;
                             btn.disabled = false;
                         }, 2000);
                     } else {
-                        btn.innerHTML = `âŒ ${serviceName} Failed`;
+                        btn.innerHTML = `${serviceName} Failed`;
                         setTimeout(() => {
                             btn.innerHTML = originalText;
                             btn.disabled = false;
                         }, 2000);
                     }
                 } catch (error) {
-                    btn.innerHTML = `âŒ ${serviceName} Error`;
+                    btn.innerHTML = `${serviceName} Error`;
                     setTimeout(() => {
                         btn.innerHTML = originalText;
                         btn.disabled = false;
