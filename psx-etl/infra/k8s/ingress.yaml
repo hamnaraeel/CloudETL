@@ -1,17 +1,24 @@
-# Kubernetes ingress.yaml for psx-etl
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: psx-etl-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
 spec:
   rules:
-    - host: psx-etl.local
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: psx-etl-service
-                port:
-                  number: 80
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: visualization-service
+            port:
+              number: 8002
+      - path: /scheduler(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: scheduler-service
+            port:
+              number: 8004

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: scheduler-service
+spec:
+  selector:
+    app: scheduler
+  ports:
+    - protocol: TCP
+      port: 8004 # Expose port 8004
+      targetPort: 8004 # Target port 8004 on the pod

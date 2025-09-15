@@ -1,0 +1,96 @@
+pipeline {
+    agent any
+
+    environment {
+        REGISTRY_URL = "icr.io/etl-registry"
+        REGION = "us-south"
+        CLUSTER_NAME = "etl-cluster"
+        KUBE_NAMESPACE = "dev"
+        
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Login to IBM Cloud') {
+            steps {
+                withCredentials([string(credentialsId: 'ibm-cloud-api-key', variable: 'IBM_CLOUD_API_KEY')]) {
+                    script {
+                        sh "ibmcloud login --apikey ${IBM_CLOUD_API_KEY} -r ${REGION}"
+                        sh "ibmcloud cr login"
+                        sh "ibmcloud ks cluster config --cluster ${CLUSTER_NAME}"
+                    }
+                }
+            }
+        }
+
+        stage('Build and Push Images') {
+            steps {
+                parallel(
+                    "Extract": {
+                        script {
+                            def imageName = "${REGISTRY_URL}/psx-etl-extract:${IMAGE_TAG}"
+                            def image = docker.build(imageName, "./psx-etl/services/extract")
+                            image.push()
+                        }
+                    },
+                    "Transform": {
+                        script {
+                            def imageName = "${REGISTRY_URL}/psx-etl-transform:${IMAGE_TAG}"
+                            def image = docker.build(imageName, "./psx-etl/services/transform")
+                            image.push()
+                        }
+                    },
+                    "Load": {
+                        script {
+                            def imageName = "${REGISTRY_URL}/psx-etl-load:${IMAGE_TAG}"
+                            def image = docker.build(imageName, "./psx-etl/services/load")
+                            image.push()
+                        }
+                    },
+                    "Scheduler": {
+                        script {
+                            def imageName = "${REGISTRY_URL}/psx-etl-scheduler:${IMAGE_TAG}"
+                            def image = docker.build(imageName, "./psx-etl/services/scheduler")
+                            image.push()
+                        }
+                    },
+                    "Visualization": {
+                        script {
+                            def imageName = "${REGISTRY_URL}/psx-etl-visualization:${IMAGE_TAG}"
+                            def image = docker.build(imageName, "./psx-etl/services/visualization")
+                            image.push()
+                        }
+                    }
+                )
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    // Replace the __IMAGE_TAG__ placeholder with the actual build number tag.
+                    // This uses find to locate all deployment files and sed to replace the placeholder in-place.
+                    sh "find ./psx-etl/infra/k8s/services -type f -name '*-deployment.yaml' -exec sed -i 's|__IMAGE_TAG__|${IMAGE_TAG}|g' {} +"
+
+                    // Apply all configurations. Because the image tag in the deployment files is now updated,
+                    // kubectl apply will automatically trigger a rolling update for any services where the image has changed.
+                    sh "kubectl apply -n ${KUBE_NAMESPACE} -f psx-etl/infra/k8s/"
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline finished. Cleaning up workspace...'
+            // This cleans up the Jenkins workspace, including the modified YAML files.
+            cleanWs()
+        }
+    }
+}

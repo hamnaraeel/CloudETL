@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: extract-deployment
+  labels:
+    app: extract
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: extract
+  template:
+    metadata:
+      labels:
+        app: extract
+    spec:
+      containers:
+      - name: extract
+        image: icr.io/etl-registry/psx-etl-extract:__IMAGE_TAG__ 
+        ports:
+        - containerPort: 8000 # Port from extract/app.py

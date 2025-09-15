@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transform-deployment
+  labels:
+    app: transform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: transform
+  template:
+    metadata:
+      labels:
+        app: transform
+    spec:
+      containers:
+      - name: transform
+        image: icr.io/etl-registry/psx-etl-transform:__IMAGE_TAG__ 
+        ports:
+        - containerPort: 8001 # Port from transform/app.py

@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: visualization-deployment
+  labels:
+    app: visualization
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: visualization
+  template:
+    metadata:
+      labels:
+        app: visualization
+    spec:
+      containers:
+      - name: visualization
+        image: icr.io/etl-registry/psx-etl-visualization:__IMAGE_TAG__ 
+        - containerPort: 8002 # Port from visualization/app.py
+        env:
+        - name: TRANSFORM_SERVICE_URL
+          value: "http://transform-service:8001"

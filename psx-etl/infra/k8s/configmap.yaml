@@ -1,8 +1,0 @@
-# Kubernetes configmap.yaml for psx-etl
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: psx-etl-config
-data:
-  ENV: production
-  LOG_LEVEL: info

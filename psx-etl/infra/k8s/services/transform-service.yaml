@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: transform-service
+spec:
+  selector:
+    app: transform
+  ports:
+    - protocol: TCP
+      port: 8001 # Expose port 8001
+      targetPort: 8001 # Target port 8001 on the pod
