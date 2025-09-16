@@ -6,7 +6,8 @@ metadata:
     nginx.ingress.kubernetes.io/rewrite-target: /$2
 spec:
   rules:
-  - http:
+  - host: etl-cluster-671e80eceac83a1671e7575023369992-0000.us-south.containers.appdomain.cloud
+    http:
       paths:
       - path: /
         pathType: Prefix
