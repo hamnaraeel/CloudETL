@@ -16,7 +16,8 @@ spec:
     spec:
       containers:
       - name: visualization
-        image: icr.io/etl-registry/psx-etl-visualization:__IMAGE_TAG__ 
+        image: icr.io/etl-registry/psx-etl-visualization:__IMAGE_TAG__
+        ports:
         - containerPort: 8002 # Port from visualization/app.py
         env:
         - name: TRANSFORM_SERVICE_URL

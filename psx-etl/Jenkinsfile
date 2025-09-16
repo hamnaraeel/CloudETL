@@ -79,8 +79,14 @@ pipeline {
                     find ./psx-etl/infra/k8s/services -type f -name '*-deployment.yaml' \
                         -exec sed -i "s|__IMAGE_TAG__|$IMAGE_TAG|g" {} +
 
-                    # Apply configs to dev namespace
-                    kubectl apply -n $KUBE_NAMESPACE -R -f psx-etl/infra/k8s/
+                    # Apply database configs to database namespace
+                    kubectl apply --namespace=database -R -f psx-etl/infra/k8s/database/
+
+                    # Apply service configs to dev namespace
+                    kubectl apply -n $KUBE_NAMESPACE -R -f psx-etl/infra/k8s/services/
+
+                    # Apply ingress to dev namespace
+                    kubectl apply -n $KUBE_NAMESPACE -f psx-etl/infra/k8s/ingress.yaml
                 '''
             }
         }
