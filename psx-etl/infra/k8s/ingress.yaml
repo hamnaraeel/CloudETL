@@ -17,6 +17,38 @@ spec:
             port:
               number: 8002
 
+      - path: /_dash-component-suites(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: visualization-service
+            port:
+              number: 8002
+
+      - path: /_dash-layout(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: visualization-service
+            port:
+              number: 8002
+
+      - path: /_dash-dependencies(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: visualization-service
+            port:
+              number: 8002
+
+      - path: /_favicon(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: visualization-service
+            port:
+              number: 8002
+
       - path: /scheduler(/|$)(.*)
         pathType: Prefix
         backend:
