@@ -5,8 +5,8 @@ pipeline {
         REGISTRY_URL = "icr.io/etl-registry"
         REGION = "us-south"
         CLUSTER_NAME = "etl-cluster"
+        RESOURCE_GROUP = "ETL-rg"   // change if you created custom group
         KUBE_NAMESPACE = "dev"
-        
         IMAGE_TAG = "${env.BUILD_NUMBER}"
     }
 
@@ -20,11 +20,12 @@ pipeline {
         stage('Login to IBM Cloud') {
             steps {
                 withCredentials([string(credentialsId: 'ibm-cloud-api-key', variable: 'IBM_CLOUD_API_KEY')]) {
-                    script {
-                        sh "ibmcloud login --apikey ${IBM_CLOUD_API_KEY} -r ${REGION}"
-                        sh "ibmcloud cr login"
-                        sh "ibmcloud ks cluster config --cluster ${CLUSTER_NAME}"
-                    }
+                    sh '''
+                        ibmcloud login --apikey $IBM_CLOUD_API_KEY -r $REGION
+                        ibmcloud target -g $RESOURCE_GROUP
+                        ibmcloud cr login
+                        ibmcloud ks cluster config --cluster $CLUSTER_NAME
+                    '''
                 }
             }
         }
@@ -73,15 +74,14 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                script {
-                    // Replace the __IMAGE_TAG__ placeholder with the actual build number tag.
-                    // This uses find to locate all deployment files and sed to replace the placeholder in-place.
-                    sh "find ./psx-etl/infra/k8s/services -type f -name '*-deployment.yaml' -exec sed -i 's|__IMAGE_TAG__|${IMAGE_TAG}|g' {} +"
+                sh '''
+                    # Replace __IMAGE_TAG__ placeholder in all deployment files
+                    find ./psx-etl/infra/k8s/services -type f -name '*-deployment.yaml' \
+                        -exec sed -i "s|__IMAGE_TAG__|$IMAGE_TAG|g" {} +
 
-                    // Apply all configurations. Because the image tag in the deployment files is now updated,
-                    // kubectl apply will automatically trigger a rolling update for any services where the image has changed.
-                    sh "kubectl apply -n ${KUBE_NAMESPACE} -f psx-etl/infra/k8s/"
-                }
+                    # Apply configs to dev namespace
+                    kubectl apply -n $KUBE_NAMESPACE -f psx-etl/infra/k8s/
+                '''
             }
         }
     }
@@ -89,7 +89,6 @@ pipeline {
     post {
         always {
             echo 'Pipeline finished. Cleaning up workspace...'
-            // This cleans up the Jenkins workspace, including the modified YAML files.
             cleanWs()
         }
     }
