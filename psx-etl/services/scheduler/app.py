@@ -5,6 +5,7 @@ import schedule
 import time
 import threading
 import logging
+import os
 
 app = Flask(__name__)
 
@@ -13,8 +14,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Configuration
-VISUALIZATION_SERVICE_URL = "http://visualization-service:8002"
-LOAD_SERVICE_URL = "http://load-service:8003"
+VISUALIZATION_SERVICE_URL = os.getenv('VISUALIZATION_SERVICE_URL', 'http://visualization-service:8002')
+LOAD_SERVICE_URL = os.getenv('LOAD_SERVICE_URL', 'http://load-service:8003')
 
 # Job status tracking
 job_status = {

@@ -19,3 +19,8 @@ spec:
         image: icr.io/etl-registry/psx-etl-scheduler:__IMAGE_TAG__ 
         ports:
         - containerPort: 8004 # Port from scheduler/app.py
+        env:
+        - name: VISUALIZATION_SERVICE_URL
+          value: "http://visualization-service:8002"
+        - name: LOAD_SERVICE_URL
+          value: "http://load-service:8003"
