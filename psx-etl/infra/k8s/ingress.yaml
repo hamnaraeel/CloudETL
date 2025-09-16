@@ -16,6 +16,7 @@ spec:
             name: visualization-service
             port:
               number: 8002
+
       - path: /scheduler(/|$)(.*)
         pathType: Prefix
         backend:
@@ -23,3 +24,27 @@ spec:
             name: scheduler-service
             port:
               number: 8004
+
+      - path: /transform(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: transform-service
+            port:
+              number: 8001
+
+      - path: /load(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: load-service
+            port:
+              number: 8003
+
+      - path: /extract(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: extract-service
+            port:
+              number: 8000

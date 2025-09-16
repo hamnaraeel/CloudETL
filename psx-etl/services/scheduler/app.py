@@ -287,7 +287,7 @@ def status():
         "timestamp": datetime.datetime.utcnow().isoformat()
     })
 
-@app.route("/trigger")
+@app.route("/scheduler/trigger")
 def manual_trigger():
     """Manually trigger a data update"""
     try:
@@ -303,7 +303,7 @@ def manual_trigger():
             "timestamp": datetime.datetime.utcnow().isoformat()
         }), 500
 
-@app.route("/trigger/<service_name>")
+@app.route("/scheduler/trigger/<service_name>")
 def manual_trigger_service(service_name):
     """Manually trigger a specific service"""
     try:
@@ -651,7 +651,7 @@ def home():
         <script>
             async function loadStatus() {
                 try {
-                    let res = await fetch("/health");
+                    let res = await fetch("/scheduler/health");
                     let data = await res.json();
                     
                     document.getElementById("job-status").textContent = 
@@ -698,7 +698,7 @@ def home():
                 btn.disabled = true;
                 
                 try {
-                    const response = await fetch("/trigger");
+                    const response = await fetch("/scheduler/trigger");
                     const data = await response.json();
                     
                     if (response.ok) {
@@ -735,7 +735,7 @@ def home():
                 btn.disabled = true;
                 
                 try {
-                    const response = await fetch(`/trigger/${serviceName}`);
+                    const response = await fetch(`/scheduler/trigger/${serviceName}`);
                     const data = await response.json();
                     
                     if (response.ok) {
@@ -766,6 +766,8 @@ def home():
             // Load status initially and then every 3 seconds
             loadStatus();
             setInterval(loadStatus, 3000);
+            
+            
         </script>
     </body>
     </html>
