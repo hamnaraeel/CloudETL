@@ -288,7 +288,7 @@ def status():
         "timestamp": datetime.datetime.utcnow().isoformat()
     })
 
-@app.route("/scheduler/trigger")
+@app.route("/trigger")
 def manual_trigger():
     """Manually trigger a data update"""
     try:
@@ -304,7 +304,7 @@ def manual_trigger():
             "timestamp": datetime.datetime.utcnow().isoformat()
         }), 500
 
-@app.route("/scheduler/trigger/<service_name>")
+@app.route("/trigger/<service_name>")
 def manual_trigger_service(service_name):
     """Manually trigger a specific service"""
     try:
