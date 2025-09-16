@@ -80,7 +80,7 @@ pipeline {
                         -exec sed -i "s|__IMAGE_TAG__|$IMAGE_TAG|g" {} +
 
                     # Apply configs to dev namespace
-                    kubectl apply -n $KUBE_NAMESPACE -f psx-etl/infra/k8s/
+                    kubectl apply -n $KUBE_NAMESPACE -R -f psx-etl/infra/k8s/
                 '''
             }
         }
