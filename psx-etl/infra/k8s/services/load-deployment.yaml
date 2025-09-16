@@ -21,7 +21,10 @@ spec:
         - containerPort: 8003 # Port from load/app.py
         env:
         - name: DATABASE_URL
-          value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres.database.svc.cluster.local:5432/$(POSTGRES_DB)"
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: DATABASE_URL
         - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
