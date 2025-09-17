@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  extract-service:
+    build: ./services/extract
+    ports:
+      - "8000:8000"
+    networks:
+      - psx-etl-network
+
+  transform-service:
+    build: ./services/transform
+    ports:
+      - "8001:8001"
+    depends_on:
+      - extract-service
+    networks:
+      - psx-etl-network
+
+  visualization-service:
+    build: ./services/visualization
+    ports:
+      - "8002:8002"
+    depends_on:
+      - transform-service
+    environment:
+      - TRANSFORM_SERVICE_URL=http://transform-service:8001
+    networks:
+      - psx-etl-network
+
+networks:
+  psx-etl-network:
+    driver: bridge

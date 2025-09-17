@@ -1,0 +1,16 @@
+# .pre-commit-config.yaml
+
+repos:
+  - repo: https://github.com/pre-commit/mirrors-black
+    rev: v22.3.0  # Latest Black version
+    hooks:
+      - id: black
+        language_version: python3
+
+  - repo: https://github.com/pre-commit/mirrors-ruff
+    rev: v0.0.256  # Latest Ruff version
+    hooks:
+      - id: ruff
+        args: ['--fix']
+        language_version: python3
+    
