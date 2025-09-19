@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: load-service
+spec:
+  selector:
+    app: load
+  ports:
+    - protocol: TCP
+      port: 8003 # Expose port 8003
+      targetPort: 8003 # Target port 8003 on the pod

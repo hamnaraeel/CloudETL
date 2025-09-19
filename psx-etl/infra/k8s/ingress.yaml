@@ -1,0 +1,258 @@
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: psx-etl-ingress
+#   annotations:
+#     nginx.ingress.kubernetes.io/configuration-snippet: |
+#       location ~* ^/_dash-component-suites/(.*)$ {
+#         proxy_pass http://upstream_balancer;
+#       }
+#       location ~* ^/_dash-layout$ {
+#         proxy_pass http://upstream_balancer;
+#       }
+#       location ~* ^/_dash-dependencies$ {
+#         proxy_pass http://upstream_balancer;
+#       }
+# spec:
+#   rules:
+#   - host: etl-cluster-671e80eceac83a1671e7575023369992-0000.us-south.containers.appdomain.cloud
+#     http:
+#       paths:
+#       # Main dashboard - NO path rewriting
+#       - path: /
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: visualization-service
+#             port:
+#               number: 8002
+
+#       # Dash assets - NO path rewriting  
+#       - path: /_dash-component-suites
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: visualization-service
+#             port:
+#               number: 8002
+
+#       - path: /_dash-layout
+#         pathType: Exact
+#         backend:
+#           service:
+#             name: visualization-service
+#             port:
+#               number: 8002
+
+#       - path: /_dash-dependencies
+#         pathType: Exact
+#         backend:
+#           service:
+#             name: visualization-service
+#             port:
+#               number: 8002
+
+#       - path: /_favicon.ico
+#         pathType: Exact
+#         backend:
+#           service:
+#             name: visualization-service
+#             port:
+#               number: 8002
+
+#       # Other services WITH path rewriting
+#       - path: /scheduler(/|$)(.*)
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: scheduler-service
+#             port:
+#               number: 8004
+
+#       - path: /transform(/|$)(.*)
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: transform-service
+#             port:
+#               number: 8001
+
+#       - path: /load(/|$)(.*)
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: load-service
+#             port:
+#               number: 8003
+
+#       - path: /extract(/|$)(.*)
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: extract-service
+#             port:
+#               number: 8000
+
+
+
+
+
+# Visualization Service (Dash) - NO path rewriting
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: visualization-ingress
+  namespace: dev
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: public-iks-k8s-nginx
+  rules:
+  - host: etl-cluster-671e80eceac83a1671e7575023369992-0000.us-south.containers.appdomain.cloud
+    http:
+      paths:
+      # Root path for main dashboard
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: visualization-service
+            port:
+              number: 8002
+              
+      # Dash specific assets - MUST be exact paths with NO rewriting
+      - path: /_dash-component-suites
+        pathType: Prefix
+        backend:
+          service:
+            name: visualization-service
+            port:
+              number: 8002
+              
+      - path: /_dash-layout
+        pathType: Exact
+        backend:
+          service:
+            name: visualization-service
+            port:
+              number: 8002
+              
+      - path: /_dash-dependencies
+        pathType: Exact
+        backend:
+          service:
+            name: visualization-service
+            port:
+              number: 8002
+              
+      - path: /_dash-update-component
+        pathType: Prefix
+        backend:
+          service:
+            name: visualization-service
+            port:
+              number: 8002
+              
+      - path: /_favicon.ico
+        pathType: Exact
+        backend:
+          service:
+            name: visualization-service
+            port:
+              number: 8002
+
+---
+# Scheduler Service WITH path rewriting
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: scheduler-ingress
+  namespace: dev
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: public-iks-k8s-nginx
+  rules:
+  - host: etl-cluster-671e80eceac83a1671e7575023369992-0000.us-south.containers.appdomain.cloud
+    http:
+      paths:
+      - path: /scheduler(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: scheduler-service
+            port:
+              number: 8004
+
+---
+# Transform Service WITH path rewriting
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: transform-ingress
+  namespace: dev
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: public-iks-k8s-nginx
+  rules:
+  - host: etl-cluster-671e80eceac83a1671e7575023369992-0000.us-south.containers.appdomain.cloud
+    http:
+      paths:
+      - path: /transform(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: transform-service
+            port:
+              number: 8001
+
+---
+# Load Service WITH path rewriting
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: load-ingress
+  namespace: dev
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: public-iks-k8s-nginx
+  rules:
+  - host: etl-cluster-671e80eceac83a1671e7575023369992-0000.us-south.containers.appdomain.cloud
+    http:
+      paths:
+      - path: /load(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: load-service
+            port:
+              number: 8003
+
+---
+# Extract Service WITH path rewriting
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: extract-ingress
+  namespace: dev
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: public-iks-k8s-nginx
+  rules:
+  - host: etl-cluster-671e80eceac83a1671e7575023369992-0000.us-south.containers.appdomain.cloud
+    http:
+      paths:
+      - path: /extract(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: extract-service
+            port:
+              number: 8000
