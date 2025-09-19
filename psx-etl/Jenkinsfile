@@ -282,7 +282,7 @@ pipeline {
                         kubectl top nodes --no-headers | head -5 || echo "Node metrics not available"
 
                         # Verify registry connectivity
-                        ibmcloud cr images --restrict ${REGISTRY_URL} --limit 1 > /dev/null
+                        ibmcloud cr image-list --restrict ${REGISTRY_URL} --no-trunc | head -n 2 > /dev/null
 
                         echo "✅ Pre-deployment checks completed"
                     '''
