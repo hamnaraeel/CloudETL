@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: extract-service
+spec:
+  selector:
+    app: extract
+  ports:
+    - protocol: TCP
+      port: 8000 # Expose port 8000
+      targetPort: 8000 # Target port 8000 on the pod

@@ -1,0 +1,7 @@
+apiVersion: v2
+name: psx-etl
+version: 0.1.0
+description: A Helm chart for psx-etl
+maintainers:
+  - name: Your Name
+    email: yourname@example.com
