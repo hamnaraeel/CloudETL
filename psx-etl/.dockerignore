@@ -1,8 +1,0 @@
-*.pyc
-__pycache__
-.venv
-.env
-*.env
-*.log
-Dockerfile
-**/*.md
