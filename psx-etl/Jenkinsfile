@@ -311,7 +311,8 @@ pipeline {
                             find ./psx-etl/infra/k8s/services -type f -name '*.yaml' -exec sed -i "s|__IMAGE_TAG__|${IMAGE_TAG}|g" {} +
                             find ./psx-etl/infra/k8s/services -type f -name '*.yaml' -exec sed -i "s|__NAMESPACE__|${TARGET_NAMESPACE}|g" {} +
                             find ./psx-etl/infra/k8s/services -type f -name '*.yaml' -exec sed -i "s|__BUILD_NUMBER__|${BUILD_NUMBER}|g" {} +
-
+                            find ./psx-etl/infra/k8s/ingress.yaml -type f -exec sed -i "s|namespace: dev|namespace: ${TARGET_NAMESPACE}|g" {} +
+                            
                             # Deploy database components (shared across environments)
                             echo "🗄️  Deploying database components..."
                             kubectl apply --namespace=database -R -f psx-etl/infra/k8s/database/ --record
