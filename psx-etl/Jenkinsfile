@@ -118,10 +118,10 @@ pipeline {
                                 ibmcloud target -g $RESOURCE_GROUP --quiet
 
                                 # Login to Container Registry
-                                ibmcloud cr login --quiet
+                                ibmcloud cr login
 
                                 # Configure kubectl for cluster
-                                ibmcloud ks cluster config --cluster $CLUSTER_NAME --quiet
+                                ibmcloud ks cluster config --cluster $CLUSTER_NAME
 
                                 # Verify cluster connection
                                 kubectl cluster-info --request-timeout=10s
